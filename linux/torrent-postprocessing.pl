@@ -63,3 +63,14 @@ sub setup {
 
   return 1;
 }
+
+# exit to shell
+exit $exit_code;
+
+__END__
+=head1 SYNOPSIS
+remove_world_write_permissions.pl <directory> [<directory>] [-v]
+=head1 OPTIONS
+  -v, --verbose         Display verbose output
+  -?, --help            This help message
+=cut
