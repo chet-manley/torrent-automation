@@ -3,7 +3,7 @@
                  PositionalBinding=$false)]
   [OutputType()]
   Param (
-	  [Parameter(Mandatory=$TRUE)][ValidateNotNullOrEmpty()][string]$Category,
+	[Parameter(Mandatory=$TRUE)][ValidateNotNullOrEmpty()][string]$Category,
     [Parameter(Mandatory=$TRUE)][ValidateNotNullOrEmpty()][string]$File,
     [Parameter(Mandatory=$TRUE)][ValidateNotNullOrEmpty()][string]$Name,
   	[Parameter(Mandatory=$TRUE)][ValidateNotNullOrEmpty()][string]$Path,
