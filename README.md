@@ -1,2 +1,2 @@
 # torrent-automation
-Scripts for automated/remote torrent handling.
+Scripts for remote automated torrent handling.
