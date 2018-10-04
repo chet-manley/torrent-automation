@@ -1,0 +1,22 @@
+{
+  "name": "torrent-automation",
+  "version": "0.0.1",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/chet-manley/torrent-automation.git"
+  },
+  "author": "Chet Manley",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/chet-manley/torrent-automation/issues"
+  },
+  "homepage": "https://github.com/chet-manley/torrent-automation#readme",
+  "dependencies": {
+    "googleapis": "^34.0.0"
+  }
+}
