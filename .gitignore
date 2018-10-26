@@ -63,14 +63,8 @@ build/Release
 node_modules/
 jspm_packages/
 
-# Package lock
-package-lock.json
-
 # Typescript v1 declaration files
 typings/
-
-# Optional npm cache directory
-.npm
 
 # Optional eslint cache
 .eslintcache
@@ -78,8 +72,18 @@ typings/
 # Optional REPL history
 .node_repl_history
 
-# Private keys or credentials
+# Optional npm cache directory
+.npm
+
+# Package lock
+package-lock.json
+
+# code coverage cache
+coverage/
+
+# Private info
 *credentials.json
 *private-key.json
 *private.key
 *jwt-keys.json
+.env

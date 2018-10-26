@@ -1,75 +1,105 @@
 #!/bin/env bash
 
-CWD=$(cd $(dirname $0) && pwd)
-movie_dir='/tank01/media/movies/'
-staging_dir='/tank01/downloads/staging/movies/'
-mapfile -t movies < "${CWD}/movies-transfer.list"
-watcher_apikey='d1ae501ed6c685b3107aa59e56292e5c'
-watcher_endpoint='postprocessing'
-watcher_url='http://media-automator.c3.local'
-watcher_port=2002
-watcher_staging_dir='/mnt/nas1/downloads/staging/movies/'
+#CWD=$(cd $(dirname $0) && pwd)
+declare -A dirs=(
+  [movies]='/tank01/media/movies/'
+  [staging]='/tank01/downloads/staging/movies/'
+  [working]=$(cd $(dirname "$0") && pwd)
+)
+declare -A watcher=(
+  [apikey]='d1ae501ed6c685b3107aa59e56292e5c'
+  [endpoint]='postprocessing'
+  [port]=2002
+  [staging]='/downloads/staging/movies/'
+  [url]='http://media-automator.c3.local'
+)
+mapfile -t movies < "${dirs[working]}/movies-transfer.list"
 
 for movie in "${movies[@]}"; do
   # bail on empty entry
   [ -z "${movie//[[:space:]]}" ] && continue
 
   # ensure movie is a file
-  if [ ! -f "${movie_dir}${movie}" ]; then
+  if [ ! -f "${dirs[movies]}${movie}" ]; then
     echo "Not a file: \"${movie}\""
     continue
   fi
 
   # ensure file is readable
-  if [ ! -r "${movie_dir}${movie}" ]; then
-    echo "Unreadable file: \"${movie}\""
+  if [ ! -r "${dirs[movies]}${movie}" ]; then
+    echo "Cannot read \"${movie}\""
     continue
   fi
-  echo "Found movie: \"${movie}\""
-
-  # hardlink file in staging area
-  ln "${movie_dir}${movie}" "${staging_dir}${movie}"
-
-  # create GUID for movie
-  movie_guid=$(printf "${movie}" | md5sum | cut -c 1-32)
-
-  # call Watcher API to rename
-  movie_json=$(curl -X POST \
-  -H 'Content-Type: application/x-www-form-urlencoded' \
-  -d 'mode=complete' \
-  -d "apikey=${watcher_apikey}" \
-  -d "guid=${movie_guid}" \
-  -d "path=${watcher_staging_dir}${movie}" \
-  "${watcher_url}:${watcher_port}/${watcher_endpoint}/" \
-  | jq -c '.data')
-
-  # ensure movie data was found
-  if [ -z "$(<<<${movie_json} jq -j '.tmdbid, .imdbid | values')" ]; then
-    echo "Metadata not found: \"${movie}\""
-    continue
-  fi
-
-  # cache new filename & extension
-  movie=$(basename "$(<<<${movie_json} jq -j '.finished_file | values')")
-  movie_extension="${movie##*.}"
   
-  # check for special movie editions
-  movie_edition=$(<<<"${movie_json}" jq -j '.edition | values')
-  if [ -n "${movie_edition}" ]; then
-    movie_title="$(<<<${movie_json} jq -r '.title')"
-    movie_year="$(<<<${movie_json} jq -r '.year')"
-    movie_name="${movie_title} (${movie_year}) - ${movie_edition}.${movie_extension}"
-    # rename file again
-    #mv "${staging_dir}${movie}" "${staging_dir}${movie_name}"
+  # store file media data
+  declare -A media=(
+    [location]="${dirs[movies]}${movie}"
+    [filename]=$(basename "${movie}")
+  )
+
+  # hardlink file in staging area & verify
+  media[link]="${dirs[staging]}${media[filename]}"
+  ln "${media[location]}" "${media[link]}" 2>/dev/null
+  if [ ! -f "${media[link]}" ]; then
+    echo "Could not create link \"${media[link]}\""
+    continue
   fi
+
+  # create GUID for filename
+  media[guid]=$(<<<"${media[filename]}" md5sum | cut -c 1-32)
+
+  # call Watcher API to retrieve media info
+  declare -A http=(
+    [res]=$(curl -sw "\n%{http_code}" -X POST \
+      -H 'Accept: application/json' \
+      -H 'Content-Type: application/x-www-form-urlencoded' \
+      -d 'mode=complete' \
+      -d "apikey=${watcher[apikey]}" \
+      -d "guid=${media[guid]}" \
+      -d "path=${watcher[staging]}${media[filename]}" \
+      "${watcher[url]}:${watcher[port]}/${watcher[endpoint]}/")
+  )
+
+  # check HTTP status code
+  http[code]=$(<<<"${http[res]}" tail -n1)
+  if [ ${http[code]} -ne 200 ]; then
+    echo "Watcher failed with status ${http[code]}"
+    continue
+  fi
+
+  # ensure media info was found
+  media[json]=$(<<<"${http[res]}" head -n1 | jq -r '.data')
+  if [ -z $(<<<"${media[json]}" jq -j '.tmdbid, .imdbid | values') ]; then
+    echo "Metadata not found for \"${media[filename]}\""
+    continue
+  fi
+
+  # calculate new filename
+  media+=(
+    [container]=$(<<<"${media[json]}" jq -r '.container')
+    [title]=$(<<<"${media[json]}" jq -r '.title' | tr ':' '-')
+    [year]=$(<<<"${media[json]}" jq -r '.year')
+    [edition]=$(<<<"${media[json]}" jq -r '.edition | if (type=="array") then . else [.] end | map(if length!=0 then . else empty end) | join(" ")')
+  )
+  [ -z "${media[container]}" ] \
+    && media[container]="${media[filename]##*.}"
+  media[name]="${media[title]]} (${media[year]})"
+  [ -n "${media[edition]}" ] \
+    && media[name]+=" - ${media[edition]}"
+  media[filename]="${media[name]//[\"\{\}\?\%\*<>]}.${media[container]}"
+
+  # rename file & verify
+  mv "${media[link]}" "${dirs[staging]}${media[filename]}" 2>/dev/null
+  if [ ! -f "${dirs[staging]}${media[filename]}" ]; then
+    echo "Failed to rename \"${media[link]}\""
+    continue
+  fi
+  echo "Completed: ${media[filename]}"
 
   # move movie to final location
 
   # upload file to Google Drive
-  clientid='404707555330-m1f0mtdqks0n2b8g4l1j5g048097ku6j.apps.googleusercontent.com'
-  secret='JGPru3Px_yaWqsNgDP8WDnd0'
-  access_token='ya29.GlsqBvhSKpNqSJIz0WJqGXtHH_KW9G6x0_UoS1ciFp_b8pTBHsV0V2WnoCO_Jh2qzj_8_p1Pcb2cXRyilvo9vRjwGB9wTFr4ch7Ul3xv28bObDvLpPRS_RnoIKWa'
-  refresh_token='1/gs9avxAs1vhMdE2hUbZ8WYmI7VslsRpzyEjgJcU_CJ4'
+  
 done
 
 exit 0
