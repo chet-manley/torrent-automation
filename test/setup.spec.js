@@ -1,7 +1,7 @@
 'use strict'
 
-describe('Test suite setup.', () => {
-  test('First test case.', () => {
+describe('Template', () => {
+  it('should pass this test case', () => {
     expect('test').toBe('test')
   })
 })
