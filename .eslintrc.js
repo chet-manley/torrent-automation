@@ -65,7 +65,10 @@ module.exports = {
     }],
     'implicit-arrow-linebreak': ['error', 'beside'],
     'linebreak-style': ['warn', 'unix'],
-    'new-cap': 'error',
+    'new-cap': ['warn', {
+      // can't use "new" on Factories()
+      'capIsNew': false
+    }],
     'no-lonely-if': 'error',
     'no-tabs': 'warn',
     'no-trailing-spaces': 'warn',
