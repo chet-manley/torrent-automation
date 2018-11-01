@@ -1,4 +1,5 @@
 {
+  "name": "Logger",
   "enabled": true,
   "priority": 4,
   "levels": {
