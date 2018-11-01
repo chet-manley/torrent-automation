@@ -3,5 +3,5 @@
   "level:range": "Priority level is out of range. Expected: <Integer> between %i and %i inclusive, or one of <String> [%s]. Received: <%s>:\"%s\".",
   "level:type": "Priority level is wrong type. Expected: <Number> or <String>. Received: <%s>.",
   "message:empty": "Message is empty.",
-  "message:type": "Message is wrong type. Expected: <String>. Received: <%s>."
+  "message:type": "Message cannot be coerced to <String>. Received: <%s>."
 }
