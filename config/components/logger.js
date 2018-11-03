@@ -4,7 +4,7 @@ const joi = require('joi')
 const defaults = require('../default.config.json').logger
 
 // combine yarg arguments with environment variables (argv > env > defaults)
-const data = Object.assign({}, process.env, process.argv)
+const argenv = Object.assign({}, process.env, process.argv)
 
 // define level<->priority map
 defaults.levels = {
@@ -57,7 +57,7 @@ const schema = joi.object().keys({
   .unknown()
 
 // validate options
-const { error, value: options } = joi.validate(data, schema)
+const { error, value: options } = joi.validate(argenv, schema)
 if (error) {
   throw new Error(`Logger config validation failed: ${error}`)
 }
