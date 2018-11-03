@@ -13,6 +13,14 @@ process.argv = yargs.options({
     describe: 'Disable logging',
     type: 'boolean',
   },
+  'env': {
+    alias: [
+      'NODE-ENV',
+      'NODE_ENV',
+    ],
+    describe: 'Set working environment',
+    type: 'string',
+  },
   'log-level': {
     alias: [
       'LOG-PRIO',
