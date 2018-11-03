@@ -1,10 +1,10 @@
 'use strict'
 
 const joi = require('joi')
-// defaults
-const LEVEL_MIN = 0
-const LEVEL_MAX = 7
-const levels = {
+const defaults = require('../default.config.json').logger
+
+// define level<->priority map
+defaults.levels = {
   'emerg': 0,
   'emergency': 0,
   'alert': 1,
@@ -17,41 +17,57 @@ const levels = {
   'notice': 5,
   'info': 6,
   'information': 6,
-  'debug': 7,
-  'default': 4,
+  'verbose': 6,
+  'debug': 7
 }
 
-const envSchema = joi.object().keys({
+const priorities = Object.values(defaults.levels)
+const PRIORITY_MIN = priorities.reduce( (x,y) => Math.min(x,y) )
+const PRIORITY_MAX = priorities.reduce( (x,y) => Math.max(x,y) )
+
+const schema = joi.object().keys({
   LOG_LEVEL: joi.alternatives().try([
     joi.string()
-      .valid([...Object.keys(levels)])
+      .valid([...Object.keys(defaults.levels)])
       .insensitive(true),
     joi.number()
       .integer()
-      .min(LEVEL_MIN)
-      .max(LEVEL_MAX),
+      .min(PRIORITY_MIN)
+      .max(PRIORITY_MAX),
   ])
-    .default(levels.default),
+    .default(defaults.priority),
   LOG_ENABLED: joi.boolean()
     .truthy(['yes', 'Y'])
     .falsy(['no', 'N'])
-    .default(true),
+    .default(defaults.enabled),
+  LOG_DISABLED: joi.boolean()
+    .truthy(['yes', 'Y'])
+    .falsy(['no', 'N'])
+    .default(!defaults.enabled),
+  VERBOSE: joi.boolean()
+    .truthy(['yes', 'Y'])
+    .falsy(['no', 'N'])
+    .default(defaults.verbose),
 })
   .unknown()
 
-const { error, value: env } = joi.validate(process.env, envSchema)
+// combine yarg arguments with environment variables (argv > env > defaults)
+const data = Object.assign({}, process.env, process.argv)
+
+// check validity of options
+const { error, value: options } = joi.validate(data, schema)
 if (error) {
-  throw new Error(`Config validation failed: ${error.message}`)
+  throw new Error(`Logger config validation failed: ${error}`)
 }
 
-const config = {
-  logger: {
-    enabled: env.LOG_ENABLED,
-    level: typeof env.LOG_LEVEL === 'number'
-      ? env.LOG_LEVEL
-      : levels[env.LOG_LEVEL],
-    levels,
-  },
+function getPriority (level, verbose) {
+  const priority = typeof level === 'number' ? level : defaults.levels[level.toLowerCase()]
+  return verbose && defaults.levels.verbose > priority ? defaults.levels.verbose : priority
 }
 
-module.exports = config
+const config = Object.assign({}, defaults, {
+  enabled: options.LOG_ENABLED && !options.LOG_DISABLED,
+  priority: getPriority(options.LOG_LEVEL, options.VERBOSE),
+})
+
+module.exports = Object.freeze(config)

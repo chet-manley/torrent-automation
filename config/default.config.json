@@ -1,0 +1,8 @@
+{
+  "logger": {
+    "enabled": true,
+    "priority": 4,
+    "throw": false,
+    "verbose": false
+  }
+}
