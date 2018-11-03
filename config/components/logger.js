@@ -3,6 +3,9 @@
 const joi = require('joi')
 const defaults = require('../default.config.json').logger
 
+// combine yarg arguments with environment variables (argv > env > defaults)
+const data = Object.assign({}, process.env, process.argv)
+
 // define level<->priority map
 defaults.levels = {
   'emerg': 0,
@@ -21,10 +24,12 @@ defaults.levels = {
   'debug': 7
 }
 
+// define minimum and maximum log priorities
 const priorities = Object.values(defaults.levels)
 const PRIORITY_MIN = priorities.reduce( (x,y) => Math.min(x,y) )
 const PRIORITY_MAX = priorities.reduce( (x,y) => Math.max(x,y) )
 
+// build schema to validate input against
 const schema = joi.object().keys({
   LOG_LEVEL: joi.alternatives().try([
     joi.string()
@@ -51,15 +56,13 @@ const schema = joi.object().keys({
 })
   .unknown()
 
-// combine yarg arguments with environment variables (argv > env > defaults)
-const data = Object.assign({}, process.env, process.argv)
-
-// check validity of options
+// validate options
 const { error, value: options } = joi.validate(data, schema)
 if (error) {
   throw new Error(`Logger config validation failed: ${error}`)
 }
 
+// returns the final log priority as an Integer
 function getPriority (level, verbose) {
   const priority = typeof level === 'number' ? level : defaults.levels[level.toLowerCase()]
   return verbose && defaults.levels.verbose > priority ? defaults.levels.verbose : priority
