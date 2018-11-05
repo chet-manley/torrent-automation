@@ -18,10 +18,10 @@ defaults.levels = {
   'warn': 4,
   'warning': 4,
   'notice': 5,
+  'verbose': 5,
   'info': 6,
   'information': 6,
-  'verbose': 6,
-  'debug': 7
+  'debug': 7,
 }
 
 // define minimum and maximum log priorities
@@ -31,6 +31,9 @@ const PRIORITY_MAX = priorities.reduce( (x,y) => Math.max(x,y) )
 
 // build schema to validate input against
 const schema = joi.object().keys({
+  debug: joi.boolean()
+    .truthy(['yes', 'Y'])
+    .falsy(['no', 'N']),
   LOG_LEVEL: joi.alternatives().try([
     joi.string()
       .valid([...Object.keys(defaults.levels)])
@@ -49,10 +52,8 @@ const schema = joi.object().keys({
     .truthy(['yes', 'Y'])
     .falsy(['no', 'N'])
     .default(!defaults.enabled),
-  VERBOSE: joi.boolean()
-    .truthy(['yes', 'Y'])
-    .falsy(['no', 'N'])
-    .default(defaults.verbose),
+  verbose: joi.number()
+    .integer(),
 })
   .unknown()
 
@@ -63,14 +64,18 @@ if (error) {
 }
 
 // returns the final log priority as an Integer
-function getPriority (level, verbose) {
-  const priority = typeof level === 'number' ? level : defaults.levels[level.toLowerCase()]
-  return verbose && defaults.levels.verbose > priority ? defaults.levels.verbose : priority
+function getPriority (level, debug, verbose) {
+  if (debug) {return defaults.levels.debug}
+  let priority = typeof level === 'number' ? level : defaults.levels[level.toLowerCase()]
+  if (verbose !== 0) {
+    priority = Math.max(defaults.levels.verbose + (verbose - 1), priority)
+  }
+  return Math.min(priority, PRIORITY_MAX)
 }
 
 const config = Object.assign({}, defaults, {
   enabled: options.LOG_ENABLED && !options.LOG_DISABLED,
-  priority: getPriority(options.LOG_LEVEL, options.VERBOSE),
+  priority: getPriority(options.LOG_LEVEL, options.debug, options.verbose),
 })
 
 module.exports = Object.freeze(config)
