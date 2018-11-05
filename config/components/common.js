@@ -1,7 +1,11 @@
 'use strict'
 
 const joi = require('joi')
-//defaults
+
+// combine yarg arguments with environment variables (argv > env > defaults)
+const argenv = Object.assign({}, process.env, process.argv)
+
+// define preset environments
 const environments = [
   'dev',
   'devel',
@@ -13,20 +17,23 @@ const environments = [
   'test',
 ]
 
-const envSchema = joi.object().keys({
+// build schema to validate input against
+const schema = joi.object().keys({
   NODE_ENV: joi.string()
     .allow(environments)
     .required(),
 })
   .unknown()
 
-const { error, value: env } = joi.validate(process.env, envSchema)
+
+// validate options
+const { error, value: options } = joi.validate(argenv, schema)
 if (error) {
-  throw new Error(`Config validation failed: ${error.message}`)
+  throw new Error(`Common config validation failed: ${error}`)
 }
 
 const config = {
-  env: env.NODE_ENV
+  env: options.NODE_ENV
 }
 
-module.exports = config
+module.exports = Object.freeze(config)
