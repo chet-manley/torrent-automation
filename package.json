@@ -4,7 +4,7 @@
   "description": "",
   "main": "index",
   "scripts": {
-    "debug": "node --no-lazy --inspect-brk index.js",
+    "debug": "node --no-lazy --inspect-brk index",
     "test": "jest",
     "test:coverage": "jest --coverage"
   },
